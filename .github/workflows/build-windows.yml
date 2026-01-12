@@ -15,7 +15,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
@@ -65,14 +65,14 @@ jobs:
       shell: cmd
       
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: DoorStateClient-Windows-x64
         path: DoorStateClient-Windows-x64.zip
         
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: DoorStateClient-Windows-x64.zip
         draft: false
