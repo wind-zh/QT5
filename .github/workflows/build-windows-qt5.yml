@@ -3,8 +3,7 @@ name: Build Qt5 Windows
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-windows-qt:
@@ -14,35 +13,38 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup Python
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
-    - name: Install aqtinstall
-      run: pip install --upgrade aqtinstall==3.1.*
-
-    - name: Download Qt5.15.2 MinGW
+    - name: Install dependencies
       run: |
-        mkdir D:\a\QT5
-        aqt install-qt windows desktop 5.15.2 win64_mingw81 --outputdir D:\a\QT5
+        python -m pip install --upgrade pip
+        pip install aqtinstall==3.1.* py7zr
 
-    - name: Add Qt & MinGW to PATH
+    - name: Create Qt directory
       shell: powershell
       run: |
-        $QtDir = "D:\a\QT5\Qt\5.15.2\mingw81_64\bin"
-        echo $QtDir | Out-File -FilePath "$env:GITHUB_PATH" -Encoding utf8 -Append
-        $env:PATH += ";$QtDir"
+        New-Item -ItemType Directory -Path D:\a\QT5 -Force
 
-    - name: Check compiler
+    - name: Install Qt 5.15.2 MinGW 64-bit
+      run: |
+        python -m aqt install-qt windows desktop 5.15.2 win64_mingw81 --outputdir D:\a\QT5
+
+    - name: Add MinGW to PATH
       shell: powershell
       run: |
-        g++ --version
-        qmake --version
+        $env:Path = "D:\a\QT5\Qt\5.15.2\mingw81_64\bin;$env:Path"
+        echo "##[set-output name=PATH;$env:Path]"
 
-    - name: Run qmake & build
+    - name: Verify qmake
       shell: powershell
       run: |
-        cd ${{ github.workspace }}
-        qmake
+        qmake -v
+
+    - name: Build your project
+      shell: powershell
+      run: |
+        qmake YOUR_PROJECT.pro
         mingw32-make
