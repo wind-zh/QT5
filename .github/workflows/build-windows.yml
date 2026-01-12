@@ -1,0 +1,120 @@
+name: Build Windows Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '5.12.12'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2017_64'
+        modules: 'qtmultimedia'
+        cache: true
+        
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v1.1
+      
+    - name: Build project
+      run: |
+        qmake DoorStateClient.pro
+        nmake release
+      shell: cmd
+      
+    - name: Create release directory
+      run: |
+        mkdir release-package
+        mkdir release-package\sounds
+      shell: cmd
+      
+    - name: Copy executable and dependencies
+      run: |
+        copy release\DoorStateClient.exe release-package\
+        copy config.ini release-package\
+        copy README.md release-package\ 2>nul || echo README.md not found
+        copy sounds\README.md release-package\sounds\ 2>nul || echo sounds\README.md not found
+        windeployqt release-package\DoorStateClient.exe
+      shell: cmd
+      
+    - name: Create sounds folder readme
+      run: |
+        echo # Audio Files > release-package\sounds\README.txt
+        echo Place your notification sound files here >> release-package\sounds\README.txt
+        echo Example: notification.wav >> release-package\sounds\README.txt
+      shell: cmd
+      
+    - name: Package release
+      run: |
+        cd release-package
+        7z a -tzip ..\DoorStateClient-Windows-x64.zip *
+      shell: cmd
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: DoorStateClient-Windows-x64
+        path: DoorStateClient-Windows-x64.zip
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: DoorStateClient-Windows-x64.zip
+        draft: false
+        prerelease: false
+        body: |
+          ## DoorStateClient Release
+          
+          ### 功能特性
+          - ✅ MQTT 消息接收
+          - ✅ 桌面通知弹窗
+          - ✅ 音频播放支持（循环/单次）
+          - ✅ 系统托盘运行
+          - ✅ 开机自启动
+          - ✅ 日志记录
+          
+          ### 下载说明
+          1. 下载 `DoorStateClient-Windows-x64.zip`
+          2. 解压到任意目录
+          3. 编辑 `config.ini` 配置文件
+          4. 将音频文件放入 `sounds` 文件夹
+          5. 运行 `DoorStateClient.exe`
+          
+          ### 配置示例
+          ```ini
+          [MQTT]
+          host=localhost
+          port=1883
+          subscribe_topic=door-events
+          
+          [Notification]
+          duration=3000
+          sound_path=./sounds/notification.wav
+          sound_volume=0.8
+          sound_loop=loop
+          
+          [Log]
+          path=./logs
+          retention_days=7
+          ```
+          
+          ### 系统要求
+          - Windows 7 及以上
+          - 无需安装 Qt 运行库（已包含所有依赖）
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
