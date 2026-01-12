@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/icons">
+        <!-- 托盘图标 - 将 app_icon.png 放在项目根目录 -->
+        <file>app_icon.png</file>
+        <!-- 如果有其他尺寸的图标也可以添加 -->
+        <!-- <file>app_icon_16.png</file> -->
+        <!-- <file>app_icon_32.png</file> -->
+    </qresource>
+</RCC>
