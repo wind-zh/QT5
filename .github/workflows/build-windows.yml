@@ -29,6 +29,15 @@ jobs:
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
       
+    - name: Build and Install QtMqtt
+      run: |
+        git clone https://github.com/qt/qtmqtt.git -b 5.15.2
+        cd qtmqtt
+        qmake
+        nmake
+        nmake install
+      shell: cmd
+      
     - name: Build project
       run: |
         qmake DoorStateClient.pro
