@@ -3,44 +3,46 @@ name: Build Qt5 Windows
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  build-windows-qt:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+    - name: Setup Python
+      uses: actions/setup-python@v5
       with:
-        version: 5.15.2
-        arch: win64_mingw81
-        cache: true
+        python-version: '3.11'
 
+    - name: Install aqtinstall
+      run: pip install --upgrade aqtinstall==3.1.*
 
-    - name: Configure
+    - name: Download Qt5.15.2 MinGW
       run: |
+        mkdir D:\a\QT5
+        aqt install-qt windows desktop 5.15.2 win64_mingw81 --outputdir D:\a\QT5
+
+    - name: Add Qt & MinGW to PATH
+      shell: powershell
+      run: |
+        $QtDir = "D:\a\QT5\Qt\5.15.2\mingw81_64\bin"
+        echo $QtDir | Out-File -FilePath "$env:GITHUB_PATH" -Encoding utf8 -Append
+        $env:PATH += ";$QtDir"
+
+    - name: Check compiler
+      shell: powershell
+      run: |
+        g++ --version
+        qmake --version
+
+    - name: Run qmake & build
+      shell: powershell
+      run: |
+        cd ${{ github.workspace }}
         qmake
-      shell: cmd
-
-    - name: Build
-      run: |
-        mingw32-make -j4
-      shell: cmd
-
-    - name: Deploy
-      run: |
-        windeployqt --release DoorMonitor.exe
-      shell: cmd
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Qt5-Windows-Build
-        path: |
-          *.exe
-          *.dll
-          platforms/
+        mingw32-make
