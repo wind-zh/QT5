@@ -1,0 +1,46 @@
+name: Build Qt5 Windows
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: 5.15.2
+        arch: win64_mingw81
+        tools: mingw81
+        cache: true
+
+    - name: Configure
+      run: |
+        qmake
+      shell: cmd
+
+    - name: Build
+      run: |
+        mingw32-make -j4
+      shell: cmd
+
+    - name: Deploy
+      run: |
+        windeployqt --release DoorMonitor.exe
+      shell: cmd
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Qt5-Windows-Build
+        path: |
+          *.exe
+          *.dll
+          platforms/
