@@ -1,50 +1,43 @@
-name: Build Qt5 Windows
+name: Build Qt Project on Windows
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  pull_request:
 
 jobs:
-  build-windows-qt:
+  build-windows:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Setup Python (for aqtinstall)
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.x'
 
-    - name: Install dependencies
+    - name: Install aqtinstall
+      run: pip install aqtinstall
+
+    - name: Install Qt 5.15.2 MinGW
       run: |
-        python -m pip install --upgrade pip
-        pip install aqtinstall==3.1.* py7zr
+        python -m aqt install-qt windows desktop 5.15.2 mingw81_64 --output D:/a/QT5 --confirm-license
 
-    - name: Create Qt directory
+    - name: Add Qt to PATH
       shell: powershell
       run: |
-        New-Item -ItemType Directory -Path D:\a\QT5 -Force
-
-    - name: Install Qt 5.15.2 MinGW 64-bit
-      run: |
-        python -m aqt install-qt windows desktop 5.15.2 win64_mingw81 --outputdir D:\a\QT5
-
-    - name: Add MinGW to PATH
-      shell: powershell
-      run: |
-        $env:Path = "D:\a\QT5\Qt\5.15.2\mingw81_64\bin;$env:Path"
-        echo "##[set-output name=PATH;$env:Path]"
-
-    - name: Verify qmake
-      shell: powershell
-      run: |
+        $qtBin = "D:\a\QT5\5.15.2\mingw81_64\bin"
+        echo "Qt bin: $qtBin"
+        # 永久设置当前 job 的 PATH
+        $env:PATH = "$qtBin;$env:PATH"
+        # 验证 qmake 和 g++
         qmake -v
+        g++ --version
 
-    - name: Build your project
+    - name: Build project
       shell: powershell
       run: |
-        qmake YOUR_PROJECT.pro
+        qmake YourProject.pro -r
         mingw32-make
